@@ -59,8 +59,8 @@ def process_file(filename):
     text_by_page = doc.get("text_by_page_url", {})
     normalized_pages = {}
     for page_url, text in text_by_page.items():
-        # Skip non-content entries
-        if "css" in text or "json" in text:
+        # Skip likely non-content pages with css and json in the URL
+        if "css" in page_url or "json" in page_url:
             continue
         normalized_text = normalize_text(text)
         normalized_pages[page_url] = normalized_text
