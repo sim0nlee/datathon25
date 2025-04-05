@@ -1,6 +1,7 @@
 import json
 import multiprocessing as mp
 import os
+import re
 
 import nltk
 import spacy
@@ -51,21 +52,28 @@ def process_file(filename):
 
     # Create a new document that copies all original keys
     output_doc = {}
-    for key in doc:
-        if key != "text_by_page_url":
-            output_doc[key] = doc[key]
+    for key, value in doc.items():
+        if key == "website_url":
+            output_doc["url"] = value
+        elif key != "text_by_page_url":
+            output_doc[key] = value
 
     # Normalize the text for pages in text_by_page_url
     text_by_page = doc.get("text_by_page_url", {})
     normalized_pages = {}
     for page_url, text in text_by_page.items():
+        # remove leading and trailing spaces and remove ending /
+        page_url = page_url.lower().strip().rstrip("/\\")
         # Skip likely non-content pages with css and json in the URL
-        if "css" in page_url or "json" in page_url:
+        if re.search(r"([^A-Za-z0-9])css", page_url) or re.search(
+            r"([^A-Za-z0-9])json", page_url
+        ):
             continue
         # skip empty text
         if text == "":
             continue
         normalized_text = normalize_text(text)
+        # if a duplicate page_url is found, overwrite the previous one
         normalized_pages[page_url] = normalized_text
 
     # Replace the original text_by_page_url with the normalized content
