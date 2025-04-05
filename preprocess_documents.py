@@ -62,6 +62,9 @@ def process_file(filename):
         # Skip likely non-content pages with css and json in the URL
         if "css" in page_url or "json" in page_url:
             continue
+        # skip empty text
+        if text == "":
+            continue
         normalized_text = normalize_text(text)
         normalized_pages[page_url] = normalized_text
 
