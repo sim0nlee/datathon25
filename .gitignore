@@ -1,3 +1,8 @@
+hackathon_data/
+Information/
+datathon.mkdocs
+/home/simo/projects/datathon25/Gieni_Hackathon_StartKit.ipynb
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
