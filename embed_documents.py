@@ -61,6 +61,9 @@ def insert_doc_in_index(filename, model, index, metadata_store):
     for page_url, text in text_by_page.items():
         # Chunk text and batch encode
         chunks = chunk_text(text, WINDOW_SIZE)
+        # skip empty chunks after preprocessing due to removing of non-ascii
+        if not chunks:
+            continue
         embeddings = model.encode(
             chunks, show_progress_bar=False, device=device, normalize_embeddings=True
         )
@@ -104,6 +107,8 @@ if __name__ == "__main__":
     index = faiss.IndexHNSWFlat(
         model.get_sentence_embedding_dimension(), 64, faiss.METRIC_INNER_PRODUCT
     )
+    # index = faiss.IndexFlatIP(model.get_sentence_embedding_dimension())
+
     # change the index parameters to be more accurate
     index.hnsw.efConstruction = 200
     index.hnsw.efSearch = 100
