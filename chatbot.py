@@ -33,16 +33,28 @@ st.markdown(
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# === HELPER ===
+
 def ask_gpt(prompt):
     st.session_state.messages.append({"role": "user", "content": prompt})
-    message = rag.answer(
+
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        response_box = st.empty()
+        response_box.markdown("_Thinking..._")
+
+    response = rag.answer(
         prompt,
         history=st.session_state.messages
     )
-    st.session_state.messages.append({"role": "assistant", "content": message})
-    return message
+    st.session_state.messages.append({"role": "assistant", "content": response})
+
+    response_box.markdown(response)
+
+    return response
     
+
 def try_parse_json(content):
     try:
         return json.loads(content)
@@ -72,7 +84,7 @@ def render_content(reply):
 # === CHAT INPUT ===
 user_input = st.chat_input("Ask me anything about your data")
 if user_input:
-    with st.spinner("Thinking..."):
+    with st.spinner(""):
         reply = ask_gpt(user_input)
 
 
