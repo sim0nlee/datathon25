@@ -1,4 +1,3 @@
-import hashlib
 import json
 import os
 
@@ -6,14 +5,6 @@ from tqdm import tqdm
 from whoosh.analysis import StandardAnalyzer
 from whoosh.fields import NUMERIC, STORED, TEXT, Schema
 from whoosh.index import create_in
-
-
-def generate_id(filename, page_url, chunk_index):
-    # Create a unique string from the metadata
-    unique_str = f"{filename}-{page_url}-{chunk_index}"
-    # Use MD5 to generate a hash and then take part of it to fit in 64 bits
-    hash_digest = hashlib.md5(unique_str.encode("utf-8")).hexdigest()[:16]
-    return int(hash_digest, 16) % (1 << 63)
 
 
 def load_documents(json_file):
@@ -49,19 +40,17 @@ if __name__ == "__main__":
 
     # Folder containing the JSON documents
     input_folder = "/home/cerrion/DATATHON/data/normalized_data"
-    files_in_folder = os.listdir(input_folder)
+    files_in_folder = os.listdir(input_folder)[:100]
     print(f"Found {len(files_in_folder)} files in {input_folder}")
 
     # Define the Whoosh schema
     # The 'content' field is analyzed using the StandardAnalyzer and will be searched using BM25 ranking
     schema = Schema(
-        id=NUMERIC(stored=True, unique=True, bits=64),
-        filename=STORED,
+        json_path=STORED,
+        url=STORED,
         page_url=STORED,
         chunk_index=NUMERIC(stored=True),
         content=TEXT(stored=True, analyzer=StandardAnalyzer()),
-        # Store additional metadata (converted to JSON) if needed
-        metadata=STORED,
     )
 
     index_dir = "whoosh_index"
@@ -76,8 +65,7 @@ if __name__ == "__main__":
         doc = load_documents(file_path)
 
         text_by_page = doc.get("text_by_page_url", {})
-        # Retain any other metadata from the document (except the text_by_page_url)
-        doc_metadata = {k: v for k, v in doc.items() if k != "text_by_page_url"}
+        url = doc.get("url", "")
 
         for page_url, text in text_by_page.items():
             # Chunk the page text
@@ -86,14 +74,12 @@ if __name__ == "__main__":
                 continue
 
             for i, chunk in enumerate(chunks):
-                doc_id = generate_id(filename, page_url, i)
                 writer.add_document(
-                    id=doc_id,
-                    filename=filename,
+                    json_path=filename,
+                    url=url,
                     page_url=page_url,
                     chunk_index=i,
                     content=chunk,
-                    metadata=json.dumps(doc_metadata),
                 )
 
     writer.commit()
