@@ -6,6 +6,26 @@ Orderfox challenge was about designing a RAG agent given raw HTML data. In this 
 
 ![](img/RAG.png)
 
+
+## Setup environment
+
+To run the code, set up a virtual environment and install all required dependencies, like below:
+
+```bash
+conda create -n orderfox python==3.11 -y
+conda activate orderfox
+pip install -r requirements.txt
+```
+
+The scripts in the reporitory do the following:
+```
+data_analysis.py – Preliminary data exploration and basic stats.
+preprocess_documents.py – Cleans raw documents, saves a processed dataset version.
+embed_documents.py – Generates vector embeddings from preprocessed text using SBERT.
+index_bm25_documents.py – Builds a BM25 index for sparse retrieval.
+rag.py – Runs the RAG pipeline: retrieval + answer generation.
+```
+
 ## Data analysis
 
 Before diving into any form of processing, we plotted the logarithms of the subpage lengths in characters and the logarithms of the number of subpages in every URL. We noted the first follows a normal distribution with mean 18316 and that most of the data has below 100 subpages, with an an average of 58.
