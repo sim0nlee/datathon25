@@ -69,10 +69,15 @@ def insert_doc_in_index(filename, model, index, metadata_store):
         )
 
         # Generate IDs and corresponding metadata for each chunk
-        for i in range(len(chunks)):
+        for i, chunk in enumerate(chunks):
             vector_id = generate_id(filename, page_url, i)
             ids_list.append(vector_id)
-            metadata = {"url": filename, "text_by_page_url": page_url, "chunk_index": i}
+            metadata = {
+                "json_path": filename,
+                "text_by_page_url": page_url,
+                "chunk_index": i,
+                "content": chunk,
+            }
             metadata.update(doc_metadata)
             metadatas_list.append(metadata)
 
