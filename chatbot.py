@@ -10,12 +10,12 @@ import rag
 # === GUI ===
 
 st.set_page_config(page_title="LLM Chat with Data", layout="wide")
-st.title("Supply Chain Chatbot")
+st.title("RAG(E Against the Machine Learning)")
 st.subheader("Chat with your data using LLMs")
 
-st.markdown(
+st.sidebar.markdown(
     """
-    This is a simple chatbot interface developed by _Rage Against the Machine Learning_<sup>TM</sup> that allows you to ask questions about your data.
+    This is a simple chatbot interface developed by _Rage Against the Machine Learning™_ that allows you to ask questions about your data.
     The chatbot uses a Retrieval-Augmented Generation (RAG) approach to provide accurate answers.
     """
 )
