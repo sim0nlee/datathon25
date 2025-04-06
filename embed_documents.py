@@ -126,7 +126,7 @@ if __name__ == "__main__":
         insert_doc_in_index(filename, model, index, metadata_store)
 
     # save index and metadata_store to disk
-    faiss.write_index(index, "index_all-MiniLM-L6-v2.faiss")
+    faiss.write_index(index, "index_all-MiniLM-L6-v2_HNSWFlat.faiss")
 
-    with open("metadata_store_all-MiniLM-L6-v2.json", "w") as f:
+    with open("metadata_store_all-MiniLM-L6-v2_HNSWFlat.json", "w") as f:
         json.dump(metadata_store, f)
