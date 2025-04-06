@@ -98,7 +98,7 @@ if __name__ == "__main__":
     WINDOW_SIZE = 1000
 
     # use the clean data
-    input_folder = "/home/cerrion/DATATHON/data/normalized_data"
+    input_folder = "/home/orderfox/DATATHON/data/normalized_data"
     files_in_folder = os.listdir(input_folder)
     print(f"Found {len(files_in_folder)} files in {input_folder}")
 

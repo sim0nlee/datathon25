@@ -94,8 +94,8 @@ if __name__ == "__main__":
     wnl = WordNetLemmatizer()
     understandable_languages = spacy.load("xx_ent_wiki_sm")
 
-    folder_path = "/home/cerrion/DATATHON/data/hackathon_data"
-    output_folder = "/home/cerrion/DATATHON/data/normalized_data"
+    folder_path = "/home/orderfox/DATATHON/data/hackathon_data"
+    output_folder = "/home/orderfox/DATATHON/data/normalized_data"
     os.makedirs(output_folder, exist_ok=True)
 
     files_in_folder = os.listdir(folder_path)
