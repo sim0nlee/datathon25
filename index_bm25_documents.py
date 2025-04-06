@@ -19,13 +19,13 @@ def load_documents(json_file):
 
 
 def chunk_text(text, window_size):
-    """Chunks the text into smaller pieces of a specified window size with overlapping of half the window."""
+    """Chunks the text into smaller pieces of a specified window size with overlapping of 1/4 the window."""
     chunks = []
-    step = window_size // 2  # half the window size
+    step = int(window_size * 3 / 4)
     for i in range(0, len(text), step):
         chunk = text[i : i + window_size]
         chunks.append(chunk)
-    return chunks
+    return chunks[:6]
 
 
 def create_whoosh_index(index_dir, schema):
@@ -36,7 +36,7 @@ def create_whoosh_index(index_dir, schema):
 
 if __name__ == "__main__":
     # Set the window size for text chunking
-    WINDOW_SIZE = 2000
+    WINDOW_SIZE = 4000
 
     # Folder containing the JSON documents
     input_folder = "/home/cerrion/DATATHON/data/normalized_data"
@@ -53,7 +53,7 @@ if __name__ == "__main__":
         content=TEXT(stored=True, analyzer=StandardAnalyzer()),
     )
 
-    index_dir = "whoosh_index"
+    index_dir = "whoosh_index_4000_first6"
     ix = create_whoosh_index(index_dir, schema)
     writer = ix.writer()
 
