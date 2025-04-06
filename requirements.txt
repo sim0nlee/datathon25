@@ -1,0 +1,11 @@
+accelerate
+faiss_cpu
+matplotlib
+nltk
+numpy
+openai
+sentence_transformers
+spacy
+torch
+tqdm
+Whoosh
