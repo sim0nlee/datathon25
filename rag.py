@@ -5,6 +5,61 @@ import faiss
 import torch
 from openai import OpenAI
 from sentence_transformers import CrossEncoder, SentenceTransformer
+from whoosh.index import open_dir
+from whoosh.qparser import QueryParser
+
+API_KEY = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=API_KEY)
+
+# Load the index and metadata store from disK
+INDEX = faiss.read_index(
+    "/home/cerrion/DATATHON/datathon25/index_all-MiniLM-L6-v2_HNSWFlat.faiss"
+)
+print("Index loaded successfully. Faiss index shape:", INDEX.ntotal)
+
+with open(
+    "/home/cerrion/DATATHON/datathon25/metadata_store_all-MiniLM-L6-v2_HNSWFlat.json",
+    "r",
+) as f:
+    METADATA_STORE = json.load(f)
+
+BM25_INDEX = open_dir("/home/cerrion/DATATHON/datathon25/whoosh_index_4000_first6")
+print(
+    f"BM25 index loaded successfully. Total number of documents: {BM25_INDEX.doc_count()}"
+)
+
+
+INSTRUCTIONS = """
+You are a helpful assistant answering user questions based an external database.
+When answering:
+1. First, decide if you need more information from the database.
+2. If you do, call the `search_knowledge_base` function by rewriting the user’s question into a concise, focused search query.
+   - Example: For “What are the safety concerns with lithium-ion batteries?”, generate: "lithium-ion battery safety concerns"
+3. Once results are returned, use the retrieved documents to answer the question.
+   - If the documents contain a clear answer, write a helpful, complete response based on them.
+   - If the documents do not contain the answer, respond with: **"The search did not return any useful result."**
+4. If the question can be answered without retrieval, answer it directly.
+The documents you receive may be lemmatized and have stopwords removed, so you should interpret them smartly and reconstruct meaning where possible.
+Always aim to be helpful, factual, and clear.
+"""
+
+
+def search_query_bm25(query_str, ix, limit=10):
+    """Search for a query string in the BM25 index and return the top results."""
+    # Create a query parser for the 'content' field
+    qp = QueryParser("content", schema=ix.schema)
+    query = qp.parse(query_str)
+
+    # Open a searcher and perform the search with BM25 ranking
+    with ix.searcher() as searcher:
+        # Limit to top 10 results (adjust as needed)
+        results = searcher.search(query, limit=limit)
+        scores = []
+        texts_retrieved = []
+        for result in results:
+            scores.append(result.score)
+            texts_retrieved.append(result.get("content"))
+        return texts_retrieved
 
 
 def retrieve_top_k_embedding(index, query_text, k=10):
@@ -20,7 +75,7 @@ def retrieve_top_k_embedding(index, query_text, k=10):
         [query_text], normalize_embeddings=True, device=device
     )
     distances, indices = index.search(query_embedding, k)
-    print("retrieved indices:", distances, indices)
+    # print("retrieved indices:", distances, indices)
     return indices[0]
 
 
@@ -50,96 +105,127 @@ def rerank_documents(
     return results[:max_hits]
 
 
-def build_rag_prompt(query: str, docs: list[str]) -> str:
-    """
-    Builds a prompt for RAG-style querying with ranked documents.
-
-    Args:
-        query: The user query.
-        docs: List of retrieved documents (strings), ranked by similarity.
-
-    Returns:
-        A tuple of instructions and full prompt string for the LLM.
-    """
-    # You can truncate or select top-k docs here if needed
-    doc_section = "\n\n".join(
-        [f"[Document {i + 1}]\n{doc.strip()}" for i, doc in enumerate(docs)]
-    )
-
-    full_prompt = f"Given the question\n[QUESTION]\n{query}\nUse ONLY the following documents to answer the question.\n\n{doc_section}\n\nAnswer:"
-
-    instructions = f"A conversation between User and Assistant. User will provide a question and a collection of documents that likely contain the answer to the question but were preprocessed removing stopwords and lematized (so they are hard to read and should be interpreted smartly). Assistant will use the documents to answer the question. If the documents don't contain the answer to the question, Assistant will reply 'The search did not return any useful result'. You are a helpful Assistant."
-
-    return instructions, full_prompt
-
-
-def answer_query(
-    index,
-    query_text,
-    api_key,
+def answer(
+    user_prompt,
+    history,
+    api_key=API_KEY,
+    metadata_store=METADATA_STORE,
+    index=INDEX,
     k_retrieve=100,
     min_hits=5,
     max_hits=10,
-    dynamic_k_threshold=None,
+    dynamic_k_threshold=0.8,
     model="gpt-4o",
     rerank_model="ms-marco-MiniLM-L-12-v2",
 ):
-    top_k = retrieve_top_k_embedding(index=index, query_text=query_text, k=k_retrieve)
-    top_chunks = []
-    for vector_id in top_k:
-        # IDs were stored as string keys in the metadata store
-        str_id = str(vector_id)
-        metadata = metadata_store.get(str_id, None)
-        if metadata is not None:
-            top_chunks.append(metadata["content"])
-        else:
-            print(f"Vector ID {vector_id}: No metadata found.")
-
-    reranked_docs = [
-        x
-        for x, _ in rerank_documents(
-            query=query_text,
-            chunks=top_chunks,
-            max_hits=max_hits,
-            dynamic_k_threshold=dynamic_k_threshold,
-            min_hits=min_hits,
-            rerank_model=rerank_model,
-        )
+    # Define tool for database search
+    # The LLM will internally decide:
+    # 1. Whether to invoke the tool (do RAG)
+    # 2. What the search query should be
+    tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "do_rag",
+                "description": "Search a database to retrieve relevant documents. Generate a smart and concise search query from the user's question.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The generated search query based on the user's question.",
+                        }
+                    },
+                    "required": ["query"],
+                    "additionalProperties": False,
+                },
+            },
+        }
     ]
-
-    # Generate the instructions and full prompt
-    instructions, full_prompt = build_rag_prompt(query_text, reranked_docs)
-    print(f"\n\n\n instructions:\n{instructions}")
-    print(f"\n\n\nFull prompt:\n{full_prompt[:2500]}")
-
-    client = OpenAI(api_key=api_key)
-
-    response = client.responses.create(
+    # expected tool call object:
+    # {
+    #   "tool_calls": [
+    #     {
+    #       "name": "do_rag",
+    #       "arguments": {
+    #         "query": "lithium-ion battery safety concerns"
+    #       }
+    #     }
+    #   ]
+    # }
+    # Step 1: Let LLM decide whether to invoke RAG
+    response = client.chat.completions.create(
         model=model,
-        instructions=instructions,
-        input=full_prompt,
+        messages=history + [{"role": "user", "content": user_prompt}],
+        tools=tools,
+        tool_choice="auto",
     )
+    tool_calls = response.choices[0].message.tool_calls  # get the first tool call
+    if tool_calls:
+        print("[LLM tool call]")
+        print(tool_calls)
+        # Step 2: LLM invoked `search_database` → Do RAG
+        print("[LLM requested database search — executing RAG]")
+        # Extract the search query from the tool call or, if missing, use the original user input.
+        query = json.loads(tool_calls[0].function.arguments).get("query", user_prompt)
+        print(f"[RAG query (LLM-generated)] {query}")
 
-    return response.output_text
+        # Perform dense retrieval
+        top_k = retrieve_top_k_embedding(index=index, query_text=query, k=k_retrieve)
+        # Load top chunks using metadata
+        top_chunks = []
+        for vector_id in top_k:
+            metadata = metadata_store.get(str(vector_id), None)
+            if metadata and "content" in metadata:
+                top_chunks.append(metadata["content"])
+
+        # Retrieve from BM25 topo
+        bm25_chunks = search_query_bm25(query, BM25_INDEX, limit=k_retrieve)
+
+        # Print how many from each
+        print(f"[FAISS chunks] {len(top_chunks)}")
+        print(f"[BM25 chunks] {len(bm25_chunks)}")
+
+        # Merge them
+        top_chunks = top_chunks + bm25_chunks
+        print(f"[Total top chunks] {len(top_chunks)}")
+
+        if not top_chunks:
+            return "The search did not return any useful result."
+        # Rerank results
+        reranked_docs = [
+            x
+            for x, _ in rerank_documents(
+                query=query,
+                chunks=top_chunks,
+                max_hits=max_hits,
+                dynamic_k_threshold=dynamic_k_threshold,
+                min_hits=min_hits,
+                rerank_model=rerank_model,
+            )
+        ]
+        if not reranked_docs:
+            return "The search did not return any useful results."
+        user_prompt = (
+            f"[QUESTION]\n{user_prompt}\n\n"
+            f"Use ONLY the following documents to answer the question:\n\n"
+            + "\n\n".join(
+                [f"Document {i + 1}: {doc}" for i, doc in enumerate(reranked_docs)]
+            )
+        )
+        print(f"[RAG user prompt] {user_prompt}")
+    else:
+        # LLM decided no search was needed — just answer directly
+        print("[LLM did not request knowledge base search — direct response]")
+    # Step 3: Generate final answer
+    response = client.chat.completions.create(
+        model=model,
+        messages=[{"role": "system", "content": INSTRUCTIONS}]
+        + history
+        + [{"role": "user", "content": user_prompt}],
+    )
+    return response.choices[0].message.content
 
 
 if __name__ == "__main__":
-    api_key = os.getenv("OPENAI_API_KEY")
-
-    query_text = "what does a spectrum engineer provide?"
-
-    folder_path = "/home/cerrion/DATATHON/data/normalized_data"
-
-    # Load the index and metadata store from disk
-    index = faiss.read_index(
-        "/home/cerrion/DATATHON/datathon25/index_all-MiniLM-L6-v2_test.faiss"
-    )
-    print("Index loaded successfully. Faiss index shape:", index.ntotal)
-
-    with open(
-        "/home/cerrion/DATATHON/datathon25/metadata_store_all-MiniLM-L6-v2_test.json",
-        "r",
-    ) as f:
-        metadata_store = json.load(f)
-
-    print(answer_query(index, query_text, api_key))
+    pass

@@ -7,7 +7,7 @@ Orderfox challenge was about designing a RAG agent given raw HTML data. In this 
 ![](img/RAG.png)
 
 
-## Setup environment
+## Setup environment and run the demo
 
 To run the code, set up a virtual environment and install all required dependencies, like below:
 
@@ -24,7 +24,9 @@ preprocess_documents.py – Cleans raw documents, saves a processed dataset vers
 embed_documents.py – Generates vector embeddings from preprocessed text using SBERT.
 index_bm25_documents.py – Builds a BM25 index for sparse retrieval.
 rag.py – Runs the RAG pipeline: retrieval + answer generation.
+streamlit run chatbot.py --server.address=0.0.0.0 --server.port=8501 – use the chatbot in a friendly user interface. Enjoy!
 ```
+![](img/Interface.png)
 
 ## Data analysis
 

@@ -4,8 +4,10 @@ matplotlib
 nltk
 numpy
 openai
+plotly
 sentence_transformers
 spacy
+streamlit
 torch
 tqdm
 Whoosh
