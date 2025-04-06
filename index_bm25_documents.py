@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
     # Folder containing the JSON documents
     input_folder = "/home/cerrion/DATATHON/data/normalized_data"
-    files_in_folder = os.listdir(input_folder)[:100]
+    files_in_folder = os.listdir(input_folder)
     print(f"Found {len(files_in_folder)} files in {input_folder}")
 
     # Define the Whoosh schema
