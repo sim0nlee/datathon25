@@ -1,7 +1,12 @@
 hackathon_data/
 Information/
 datathon.mkdocs
-/home/simo/projects/datathon25/Gieni_Hackathon_StartKit.ipynb
+Gieni_Hackathon_StartKit.ipynb
+subpage_length_distribution.png
+subpages_per_page_distribution.png
+text_length_distribution_filtered.png
+pages_per_document_distribution_filtered.png
+notes.md
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -56,15 +56,14 @@ def ask_gpt(prompt):
     # )
     # message = response.choices[0].message.content
     # st.session_state.messages.append({"role": "assistant", "content": message})
-    # return messages
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    # return messages``
     # Mock response repeating the prompt for testing
     # In a real scenario, you would call the OpenAI API here
+    st.session_state.messages.append({"role": "user", "content": prompt})
     response = f"Mock response for: {prompt}"
     st.session_state.messages.append({"role": "assistant", "content": response})
     return response
     
-
 def try_parse_json(content):
     try:
         return json.loads(content)
