@@ -37,20 +37,11 @@ if "messages" not in st.session_state:
 def ask_gpt(prompt):
     st.session_state.messages.append({"role": "user", "content": prompt})
 
-    with st.chat_message("user"):
-        st.markdown(prompt)
-
-    with st.chat_message("assistant"):
-        response_box = st.empty()
-        response_box.markdown("_Thinking..._")
-
     response = rag.answer(
         prompt,
         history=st.session_state.messages
     )
     st.session_state.messages.append({"role": "assistant", "content": response})
-
-    response_box.markdown(response)
 
     return response
     
